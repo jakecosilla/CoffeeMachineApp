@@ -1,167 +1,294 @@
 # Coffee Machine API
 
-An HTTP API that simulates an imaginary internet-connected coffee machine. The API implements various business logic rules including call counting, service unavailability cycles, and April Fools' Day behavior.
+An HTTP API that simulates an imaginary internet-connected coffee machine. The API implements business rules such as call counting, service unavailability cycles, April Fools' behavior, and weather-based coffee selection.
 
-## Requirements Met
+---
 
-### 1. Normal Operation (200 OK)
-- **Endpoint**: `GET /brew-coffee`
-- **Response**: 
+# ☕ Features
+
+## 1. Normal Operation (200 OK)
+
+* **Endpoint**: `GET /brew-coffee`
+* **Response**:
+
+```json
+{
+  "message": "Your piping hot coffee is ready",
+  "prepared": "2026-03-18T21:17:09+08:00"
+}
+```
+
+* Returns ISO-8601 timestamp with timezone
+
+---
+
+## 2. Every 5th Call Returns 503
+
+* **Trigger**: 5th, 10th, 15th calls
+* **Response**: Empty body
+* **Status**: `503 Service Unavailable`
+* Simulates machine running out of coffee
+
+---
+
+## 3. April 1st Returns 418
+
+* **Trigger**: April 1
+* **Response**: Empty body
+* **Status**: `418 I'm a Teapot`
+* Based on RFC 2324
+
+---
+
+## 4. 🌤 Weather-Based Coffee
+
+The API integrates with OpenWeather API:
+
+* If **temperature > 30°C**
+
   ```json
   {
-    "message": "Your piping hot coffee is ready",
-    "prepared": "2026-03-18T21:17:09.1208160+08:00"
+    "message": "Your refreshing iced coffee is ready"
   }
   ```
-- **Status Code**: 200 OK
-- **Feature**: Returns a JSON response with the current timestamp in ISO-8601 format
 
-### 2. Every 5th Call Returns Service Unavailable (503)
-- **Trigger**: Every 5th call to the endpoint (5, 10, 15, etc.)
-- **Response**: Empty body
-- **Status Code**: 503 Service Unavailable
-- **Reason**: Simulates the coffee machine running out of coffee
+* Otherwise:
 
-### 3. April 1st Returns I'm a Teapot (418)
-- **Trigger**: When the system date is April 1st
-- **Response**: Empty body
-- **Status Code**: 418 I'm a Teapot
-- **Reason**: April Fools' Day joke per RFC 2324
+  ```json
+  {
+    "message": "Your piping hot coffee is ready"
+  }
+  ```
 
-## Architecture
+* If weather API fails → fallback to hot coffee
 
-The solution follows a clean, layered architecture pattern consistent with the CustomerOnboardingApp:
+---
+
+# 🏗 Architecture
+
+Follows **Clean Architecture**
 
 ### Layers
 
-1. **Domain** (`Domain.csproj`)
-   - Core business entities
-   - `CoffeeMachine` entity for state representation
+### 1. Domain
 
-2. **Application** (`Application.csproj`)
-   - Business logic and use cases
-   - `ICoffeeMachineService` interface and `CoffeeMachineService` implementation
-   - Service registration extensions
+* Core entities
 
-3. **Infrastructure** (`Infrastructure.csproj`)
-   - Data access and state management
-   - `ICoffeeMachineStateManager` for tracking call counts
-   - Thread-safe in-memory state management
-   - Service registration extensions
+### 2. Application
 
-4. **Api** (`Api.csproj`)
-   - HTTP endpoint definitions
-   - `CoffeeEndpoints` extension with the `/brew-coffee` endpoint
-   - Program.cs with logging, exception handling, and CORS configuration
-   - Swagger/OpenAPI documentation
+* Business logic
+* `CoffeeMachineService`
+* Interfaces (contracts)
+* DTOs
 
-5. **Tests** (`Tests.csproj`)
-   - Comprehensive test suite using XUnit
-   - Service tests with Moq for unit testing business logic
-   - Endpoint integration tests using WebApplicationFactory
-   - FluentAssertions for expressive test assertions
+### 3. Infrastructure
 
-## Test Organization
+* External integrations
+* Weather API client
+* State management
 
-Tests are organized following the application structure:
+### 4. API
 
-- **Tests/Application/Services/CoffeeMachineServiceTests.cs** - Unit tests for the CoffeeMachineService
-- **Tests/Api/Endpoints/CoffeeEndpointsTests.cs** - Integration tests for the API endpoints
+* Endpoint definitions
+* Middleware
+* DI configuration
 
-## Running the Application
+### 5. Tests
 
-### Build
+* Unit + Integration tests
+* XUnit + Moq + FluentAssertions
+
+---
+
+# ⚙️ Setup Instructions
+
+## 1. Clone Repo
 
 ```bash
-dotnet build
+git clone https://github.com/jakecosilla/CoffeeMachineApp.git
+cd CoffeeMachineApp/backend
 ```
 
-### Run API Server
+---
+
+## 2. Install Dependencies
 
 ```bash
-dotnet run --project backend/Api
+dotnet restore
 ```
 
-The API will start on `https://localhost:7000` (HTTPS) and `http://localhost:5000` (HTTP).
+---
 
-Access Swagger UI at: `https://localhost:7000/swagger/ui`
+## 3. Configure Weather API
 
-### Run Tests
+Create or update:
+
+### `appsettings.Development.json`
+
+```json
+{
+  "Weather": {
+    "ApiKey": "YOUR_API_KEY",
+    "BaseUrl": "https://api.openweathermap.org/",
+    "City": "Manila"
+  }
+}
+```
+
+---
+
+## 🔑 Getting API Key
+
+1. Go to: https://openweathermap.org/api
+2. Create a free account
+3. Generate API key
+4. Replace:
+
+```json
+"ApiKey": "YOUR_API_KEY"
+```
+
+---
+
+## ⚠️ Important Notes
+
+* API key may take a few minutes to activate
+* Invalid key will return:
+
+  ```json
+  { "cod": 401, "message": "Invalid API key" }
+  ```
+
+---
+
+## ✅ Alternative: Environment Variable
+
+```bash
+export Weather__ApiKey=your_api_key
+```
+
+---
+
+# 🚀 Run the Application
+
+```bash
+dotnet run --project Api
+```
+
+API available at:
+
+* https://localhost:7000
+* http://localhost:5000
+
+Swagger:
+
+```
+https://localhost:7000/swagger
+```
+
+---
+
+# 🧪 Run Tests
 
 ```bash
 dotnet test
 ```
 
-## Testing Examples
+---
 
-### Using curl
+# 🧪 Test Coverage
 
-```bash
-# First call - should return 200 OK
-curl -i http://localhost:5000/brew-coffee
+### ✅ Core Behavior
 
-# 5th call in sequence - should return 503
-# (Make 4 calls first, then)
-curl -i http://localhost:5000/brew-coffee
+* 200 OK response
+* 503 every 5th call
+* 418 April Fools
 
-# On April 1st - should return 418
-curl -i http://localhost:5000/brew-coffee
-```
+### ✅ Weather Feature
 
-## Test Coverage
+* Hot weather → iced coffee
+* Cold weather → hot coffee
+* API failure → fallback
 
-The project includes 14 comprehensive tests:
+### ✅ Integration Tests
 
-### Service Tests (8 tests)
-- First call returns 200 OK with correct message and timestamp
-- Response timestamp is valid ISO-8601 format
-- Every 5th call returns 503 Service Unavailable
-- 10th call returns 503
-- Calls after 503 resume with 200 OK
-- 12 consecutive calls follow expected pattern
-- April Fools' Day special behavior (418)
+* Endpoint validation
+* JSON structure
+* Response patterns
 
-### Endpoint Tests (6 tests)
-- First call returns 200 OK with brewed coffee
-- Valid JSON response structure
-- Every 5th call returns 503
-- 10th call returns 503
-- 6th call after 503 resumes with 200 OK
-- 12 consecutive calls follow expected pattern
-- April Fools' Day returns 418
-- Response is valid JSON
+---
 
-All tests pass successfully.
+# 🧠 Design Decisions
 
-## Design Decisions
+## Clean Architecture
 
-### State Management
-- Used in-memory singleton `CoffeeMachineStateManager` for simplicity
-- Thread-safe using lock mechanism
-- Could be replaced with database persistence if needed
+* Separation of concerns
+* Testable business logic
+* Replaceable infrastructure
 
-### Testing Framework
-- **XUnit**: Modern .NET testing framework with parameterized tests
-- **Moq**: Industry-standard mock library for dependency injection
-- **FluentAssertions**: Expressive assertion library for readable assertions
-- **WebApplicationFactory**: Built-in testing infrastructure for integration tests
+---
 
-### Status Codes
-- 200 OK for successful brew
-- 503 Service Unavailable to indicate service degradation
-- 418 I'm a Teapot as per RFC 2324 for April Fools' joke
+## Weather Integration
 
-### Architecture Benefits
-- Clear separation of concerns
-- Testable business logic layer
-- Easy to swap implementations (e.g., database for state)
-- Scalable structure for additional features
-- Consistent patterns with CustomerOnboardingApp
+* Implemented in Infrastructure layer
+* Uses HttpClientFactory
+* Config-driven (Options pattern)
 
-## Development Features
+---
 
-- **Logging**: Request/response logging middleware for debugging
-- **Exception Handling**: Global exception handler with JSON error responses
-- **CORS**: Open CORS policy for development (configurable for production)
-- **Swagger/OpenAPI**: API documentation and interactive testing in development
-- **Request Tracing**: HTTP method and path logging for all requests
+## Date Handling
+
+* Uses `DateTimeOffset`
+* Ensures timezone-aware ISO format
+
+---
+
+## State Management
+
+* In-memory singleton
+* Thread-safe
+* Easily replaceable with DB
+
+---
+
+## Testing Strategy
+
+* Unit tests (Application)
+* Integration tests (API)
+* Mocked dependencies (Weather, Time)
+
+---
+
+# 📌 Development Features
+
+* Logging middleware
+* Global exception handling
+* Swagger/OpenAPI
+* Config validation (fail fast)
+* Dependency Injection
+
+---
+
+# 🏆 Summary
+
+This project demonstrates:
+
+* Clean Architecture in .NET
+* External API integration
+* Robust error handling
+* Production-ready testing strategy
+* Strong separation of concerns
+
+---
+
+# 💡 Notes
+
+* Weather API is optional for core functionality
+* System gracefully degrades if weather service fails
+* Designed for extensibility and scalability
+
+---
+
+# 👨‍💻 Author
+
+Jake Ray Osilla

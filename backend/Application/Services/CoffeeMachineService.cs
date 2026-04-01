@@ -1,54 +1,75 @@
 using Application.Interfaces;
 using Application.Models;
-using Infrastructure.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Services
+namespace Application.Services;
+
+public class CoffeeMachineService : ICoffeeMachineService
 {
-    public class CoffeeMachineService : ICoffeeMachineService
+    private readonly ICoffeeMachineStateManager _stateManager;
+    private readonly ILogger<CoffeeMachineService> _logger;
+    private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IWeatherService _weatherService;
+
+    public CoffeeMachineService(
+        ICoffeeMachineStateManager stateManager,
+        ILogger<CoffeeMachineService> logger,
+        IDateTimeProvider dateTimeProvider,
+        IWeatherService weatherService)
     {
-        private readonly ICoffeeMachineStateManager _stateManager;
-        private readonly ILogger<CoffeeMachineService> _logger;
-        private readonly IDateTimeProvider _dateTimeProvider;
+        _stateManager = stateManager;
+        _logger = logger;
+        _dateTimeProvider = dateTimeProvider;
+        _weatherService = weatherService;
+    }
 
-        public CoffeeMachineService(
-            ICoffeeMachineStateManager stateManager,
-            ILogger<CoffeeMachineService> logger,
-            IDateTimeProvider dateTimeProvider)
+    public async Task<(int StatusCode, CoffeeBrewResponseDto? Response)> BrewCoffeeAsync()
+    {
+        var today = _dateTimeProvider.Now;
+
+        // 1. April Fools first (highest priority)
+        if (today.Month == 4 && today.Day == 1)
         {
-            _stateManager = stateManager;
-            _logger = logger;
-            _dateTimeProvider = dateTimeProvider;
+            _logger.LogInformation(Constants.Messages.AprilFoolsLog);
+            return (Constants.HttpStatusCodes.ImATeapot, null);
         }
 
-        public async Task<(int StatusCode, CoffeeBrewResponseDto? Response)> BrewCoffeeAsync()
+        // 2. Increment call count
+        var callCount = await _stateManager.IncrementCallCountAsync();
+        _logger.LogInformation(Constants.Messages.CoffeeBrewCallLog, callCount);
+
+        // 3. Every 5th call → 503
+        if (callCount % 5 == 0)
         {
-            // Check if it's April 1st (April Fools' Day)
-            var today = _dateTimeProvider.Now;
-            if (today.Month == 4 && today.Day == 1)
-            {
-                _logger.LogInformation(Constants.Messages.AprilFoolsLog);
-                return (Constants.HttpStatusCodes.ImATeapot, null);
-            }
-
-            // Increment call count
-            var callCount = await _stateManager.IncrementCallCountAsync();
-            _logger.LogInformation(Constants.Messages.CoffeeBrewCallLog, callCount);
-
-            // Every 5th call should return 503 Service Unavailable
-            if (callCount % 5 == 0)
-            {
-                _logger.LogWarning(Constants.Messages.OutOfCoffeeLog, callCount);
-                return (Constants.HttpStatusCodes.ServiceUnavailable, null);
-            }
-
-            // Normal case: return 200 with coffee ready message
-            var response = new CoffeeBrewResponseDto(
-                Constants.Messages.CoffeeReadyMessage,
-                DateTime.Now.ToString(Constants.Formats.IsoDateFormat));
-
-            _logger.LogInformation(Constants.Messages.CoffeeBrewedSuccessfullyLog, response.Prepared);
-            return (Constants.HttpStatusCodes.Ok, response);
+            _logger.LogWarning(Constants.Messages.OutOfCoffeeLog, callCount);
+            return (Constants.HttpStatusCodes.ServiceUnavailable, null);
         }
+
+        // 4. Weather check (NEW FEATURE)
+        string message = Constants.Messages.CoffeeReadyMessage;
+
+        try
+        {
+            var temperature = await _weatherService.GetCurrentTemperatureAsync(default);
+
+            if (temperature > 30)
+            {
+                message = Constants.Messages.IcedCoffeeMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            // IMPORTANT: Do NOT break coffee machine if weather fails
+            _logger.LogError(ex, "Weather service failed. Defaulting to hot coffee.");
+        }
+
+        // 5. Response
+        var response = new CoffeeBrewResponseDto(
+            message,
+            _dateTimeProvider.Now.ToString(Constants.Formats.IsoDateFormat));
+
+        _logger.LogInformation(Constants.Messages.CoffeeBrewedSuccessfullyLog, response.Prepared);
+
+        return (Constants.HttpStatusCodes.Ok, response);
     }
 }

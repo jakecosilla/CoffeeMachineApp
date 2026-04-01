@@ -4,16 +4,17 @@ namespace Application
     {
         public static class Messages
         {
+            public const string CoffeeReadyMessage = "Your piping hot coffee is ready";
+            public const string IcedCoffeeMessage = "Your refreshing iced coffee is ready";
             public const string AprilFoolsLog = "It's April 1st - returning 418 I'm a teapot";
             public const string CoffeeBrewCallLog = "Coffee brew call #{CallCount}";
             public const string OutOfCoffeeLog = "Out of coffee - returning 503 Service Unavailable on call #{CallCount}";
-            public const string CoffeeReadyMessage = "Your piping hot coffee is ready";
             public const string CoffeeBrewedSuccessfullyLog = "Coffee brewed successfully at {Prepared}";
         }
 
         public static class Formats
         {
-            public const string IsoDateFormat = "O"; // ISO-8601 format
+            public const string IsoDateFormat = "yyyy-MM-ddTHH:mm:sszzz"; // ISO-8601 format
         }
 
         public static class HttpStatusCodes

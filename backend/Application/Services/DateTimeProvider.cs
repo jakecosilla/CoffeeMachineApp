@@ -1,9 +1,8 @@
 using Application.Interfaces;
 
-namespace Application.Services
+namespace Application.Services;
+
+public class DateTimeProvider : IDateTimeProvider
 {
-    public class DateTimeProvider : IDateTimeProvider
-    {
-        public DateTime Now => DateTime.Now;
-    }
+    public DateTimeOffset Now => DateTimeOffset.Now;
 }

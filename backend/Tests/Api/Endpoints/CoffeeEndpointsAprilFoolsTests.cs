@@ -5,30 +5,29 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Xunit;
 
-namespace Tests.Api.Endpoints
+namespace Tests.Api.Endpoints;
+
+public class CoffeeEndpointsAprilFoolsTests : IClassFixture<CoffeeTestAprilFoolsWebApplicationFactory>
 {
-    public class CoffeeEndpointsAprilFoolsTests : IClassFixture<CoffeeTestAprilFoolsWebApplicationFactory>
+    private readonly HttpClient _client;
+
+    public CoffeeEndpointsAprilFoolsTests(CoffeeTestAprilFoolsWebApplicationFactory factory)
     {
-        private readonly HttpClient _client;
-
-        public CoffeeEndpointsAprilFoolsTests(CoffeeTestAprilFoolsWebApplicationFactory factory)
+        _client = factory.WithWebHostBuilder(builder =>
         {
-            _client = factory.WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Test");
-            }).CreateClient();
-        }
+            builder.UseEnvironment("Test");
+        }).CreateClient();
+    }
 
-        [Fact]
-        public async Task BrewCoffee_OnAprilFools_ReturnsImATeapot()
-        {
-            // Act
-            var response = await _client.GetAsync("/brew-coffee");
+    [Fact]
+    public async Task BrewCoffee_OnAprilFools_ReturnsImATeapot()
+    {
+        // Act
+        var response = await _client.GetAsync("/brew-coffee");
 
-            // Assert
-            ((int)response.StatusCode).Should().Be(418);
-            var content = await response.Content.ReadAsStringAsync();
-            content.Should().BeEmpty();
-        }
+        // Assert
+        ((int)response.StatusCode).Should().Be(418);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().BeEmpty();
     }
 }

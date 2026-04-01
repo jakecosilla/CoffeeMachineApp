@@ -1,7 +1,7 @@
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IDateTimeProvider
 {
-    public interface IDateTimeProvider
-    {
-        DateTime Now { get; }
-    }
+    DateTimeOffset Now { get; }
 }
+

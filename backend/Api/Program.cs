@@ -1,12 +1,16 @@
 using Application;
 using Infrastructure;
 using Api.Endpoints;
+using Application.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.Configure<WeatherOptions>(
+    builder.Configuration.GetSection("Weather"));
+
 // Add services to the container
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
